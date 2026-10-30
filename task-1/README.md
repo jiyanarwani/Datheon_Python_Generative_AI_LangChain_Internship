@@ -1,6 +1,6 @@
 # AI-Based Document Parser with Strict JSON Validation
 
-A Python desktop and CLI tool that uses the Google Gemini API to extract structured data from unstructured resumes and invoices, and validates the extracted output using Pydantic.
+A Python desktop and CLI tool that uses the Google Gemini API to extract structured data from unstructured resumes and invoices and validates the extracted output using Pydantic.
 
 ---
 
