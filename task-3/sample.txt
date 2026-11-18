@@ -1,0 +1,5 @@
+Project Apollo Hardware Budget Report:
+- Server Infrastructure: $14,500
+- Networking Equipment: $3,200
+- Backup Storage Units: $4,800
+- Workstations: $7,500
