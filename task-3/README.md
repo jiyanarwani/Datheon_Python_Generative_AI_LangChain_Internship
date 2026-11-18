@@ -7,5 +7,3 @@ A Python AI agent built with LangChain that uses function calling to solve compo
 - **`web_search`**: DuckDuckGo search for live web information.
 - **`calculator`**: Evaluates math expressions using Python's `math` module.
 - **`read_file`**: Reads local text files.
-
-## Project Structure
