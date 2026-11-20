@@ -25,7 +25,7 @@ def load_api_key() -> str:
 
 
 def call_gemini(api_key: str, prompt: str, schema_cls: Type[BaseModel]) -> str:
-    model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+    model_name = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
     client = genai.Client(api_key=api_key)
 
     config = types.GenerateContentConfig(
@@ -34,11 +34,33 @@ def call_gemini(api_key: str, prompt: str, schema_cls: Type[BaseModel]) -> str:
         temperature=0.0,
     )
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=config,
-    )
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=config,
+        )
+    except Exception as e:
+        # Fallback to alternate models if rate limit (429) or high demand (503) occurs
+        fallback_models = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"]
+        fallback_success = False
+        last_error = e
+        for fallback in fallback_models:
+            if fallback == model_name:
+                continue
+            try:
+                response = client.models.generate_content(
+                    model=fallback,
+                    contents=prompt,
+                    config=config,
+                )
+                fallback_success = True
+                break
+            except Exception as fe:
+                last_error = fe
+        if not fallback_success:
+            raise last_error
+
     if not response or not response.text:
         raise ValueError("Empty response received from Gemini.")
     return response.text.strip()
@@ -276,21 +298,24 @@ def launch_gui() -> None:
                 root.after(0, update_success)
 
             except ValidationError as v_err:
-                def update_val_err():
-                    err_msg = "Output failed Pydantic schema validation:\n\n"
-                    for e in v_err.errors():
-                        loc = " -> ".join(str(i) for i in e.get("loc", []))
-                        err_msg += f"- Field: {loc}\n  Error: {e.get('msg')}\n\n"
-                    output_text_box.insert(tk.END, err_msg)
+                err_msg = "Output failed Pydantic schema validation:\n\n"
+                for e in v_err.errors():
+                    loc = " -> ".join(str(i) for i in e.get("loc", []))
+                    err_msg += f"- Field: {loc}\n  Error: {e.get('msg')}\n\n"
+
+                def update_val_err(msg=err_msg):
+                    output_text_box.insert(tk.END, msg)
                     status_var.set("Pydantic validation failed.")
                     btn_parse.config(state=tk.NORMAL)
 
                 root.after(0, update_val_err)
 
             except Exception as err:
-                def update_fail():
-                    messagebox.showerror("Error", f"Extraction failed: {err}")
-                    status_var.set(f"Error: {err}")
+                err_msg = str(err)
+
+                def update_fail(msg=err_msg):
+                    messagebox.showerror("Error", f"Extraction failed: {msg}")
+                    status_var.set(f"Error: {msg}")
                     btn_parse.config(state=tk.NORMAL)
 
                 root.after(0, update_fail)
